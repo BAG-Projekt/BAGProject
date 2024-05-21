@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -23,12 +26,20 @@ class UserController extends Controller
             'pnumber' => ['required', 'regex:/^(\+\d{1,3}[- ]?)?\d{10}$/'],
         ]);
 
+        $password = Str::random(20);
+
         User::create([
             'name' => $request->name,
             'username' => $request->username,
             'email' => $request->email,
             'pnumber' => $request->pnumber,
+            'password' => Hash::make($password),
         ]);
+
+        Mail::raw("A felhasználóneved: {$request->username}; A jelszavad: {$password}; Bejelentkezés után erősen ajánlott a jelszó módása biztonsági okokból.", function ($message) use ($request) {
+            $message->to($request->email)
+                ->subject('Hozzá lettél adva a rendszerünkhöz!');
+        });
 
         return redirect(route('add'));
     }
@@ -71,7 +82,7 @@ class UserController extends Controller
 
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 if (isset($request->filter['id'])) {
                     $q->orWhere('id', 'like', "%{$searchTerm}%");
                 }
@@ -95,5 +106,4 @@ class UserController extends Controller
 
         return view('users', ['users' => $users]);
     }
-
 }
